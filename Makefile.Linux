@@ -37,6 +37,7 @@ all: game steam_appid.txt libsteam_api.so
 	cp -p game release
 	cp -p libsteam_api.so release
 	cp -p LICENSE*.txt release
+	cp -p README.txt release
 	./game
 
 clean:

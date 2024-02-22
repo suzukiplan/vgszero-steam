@@ -37,6 +37,7 @@ all: game steam_appid.txt libsteam_api.dylib
 	cp -p game release
 	cp -p libsteam_api.dylib release
 	cp -p LICENSE*.txt release
+	cp -p README.txt release
 	./game
 
 clean:
