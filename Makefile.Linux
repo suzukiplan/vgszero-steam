@@ -36,6 +36,7 @@ all: game steam_appid.txt libsteam_api.so
 	mkdir release
 	cp -p game release
 	cp -p libsteam_api.so release
+	cp -p LICENSE*.txt release
 	./game
 
 clean:

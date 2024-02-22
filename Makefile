@@ -1,4 +1,5 @@
 all: src/gamepkg.c src/err_joypad.c
+	git submodule update --init vgszero
 	make -f Makefile.`uname`
 
 src/gamepkg.c: game.pkg
