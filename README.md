@@ -14,7 +14,7 @@ Steam で VGS-Zero のゲームを販売するための SDK です
 2. Steamworks SDK をダウンロードして `public` と `redistributable_bin` を [`./sdk`](./sdk) 以下にコピー
 3. 販売する `game.pkg` をこのリポジトリ直下に配置
 4. `steam_appid.txt` を作成して AppID を記述
-5. `./game_actions_X.vdf` を Steam クライアントのインストール先の `controller_config` にコピーして `X` の箇所を AppID にリネーム
+5. [`./game_actions_X.vdf`](./game_actions_X.vdf) を Steam クライアントのインストール先の `controller_config` にコピーして `X` の箇所を AppID にリネーム
 6. `make` (Windows の場合は `make.bat`) を実行
 
 ## Game Contorller Setup

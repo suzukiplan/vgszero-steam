@@ -8,21 +8,38 @@ This document describes how to play this game and other information, so please r
 
 Controls
 
-This game can be played with a USB-connected gamepad (both XInput and DirectInput compatible) or keyboard.
+This game can be played with a gamepad or keyboard.
 Button assignments can be freely customized in the SteamInput menu.
 
-Keyboard Controls
+Keyboard Controls (Windows)
 
 - Cursor key: D-Pad (Can be changed in the key configuration)
 - X key: A button (Can be changed in the key configuration)
 - Z key: B button (Can be changed in the key configuration)
 - Space key: START button (Can be changed in the key configuration)
 - ESC key: SELECT button (Can be changed in the key configuration)
+- CTRL+R: Reset the game
 - CTRL+X: Exit the game (CTRL+Q, CTRL+C also work)
 - Alt+Enter: Toggle full screen (CTRL+F also work)
 - CTRL+A: Toggle screen aspect mode
 - CTRL+S: Screen Resolution Settings
 - CTRL+K: Key configuration for the Keyboard
+
+Keyboard Controls (Linux/macOS)
+
+- Cursor key: D-Pad
+- X key: A button
+- Z key: B button
+- Space key: START button
+- ESC key: SELECT button
+- R: Reset the game
+- Q: Exit the game
+- R: Reset
+
+Notes on the Linux/macOS version
+
+- Supported screen displays are for Full-Screen and Aspect-Fit only.
+- Keyboard input key assignments cannot be changed.
 
 How to Play
 
