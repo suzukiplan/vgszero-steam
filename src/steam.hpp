@@ -14,9 +14,10 @@ class CSteam
     void (*putlog)(const char*, ...);
     InputActionSetHandle_t act;
     InputAnalogActionHandle_t actMove;
-    InputDigitalActionHandle_t actFire;
-    InputDigitalActionHandle_t actJump;
-    InputDigitalActionHandle_t actPause;
+    InputDigitalActionHandle_t actA;
+    InputDigitalActionHandle_t actB;
+    InputDigitalActionHandle_t actStart;
+    InputDigitalActionHandle_t actSelect;
     STEAM_CALLBACK_MANUAL(CSteam, onGameOverlayActivated, GameOverlayActivated_t, callbackGameOverlayActivated);
 
   public:
@@ -67,13 +68,15 @@ class CSteam
             return 0;
         }
         uint8_t result = 0;
-        auto fire = SteamInput()->GetDigitalActionData(inputHandle, actFire);
-        auto jump = SteamInput()->GetDigitalActionData(inputHandle, actJump);
-        auto pause = SteamInput()->GetDigitalActionData(inputHandle, actPause);
+        auto a = SteamInput()->GetDigitalActionData(inputHandle, actA);
+        auto b = SteamInput()->GetDigitalActionData(inputHandle, actB);
+        auto start = SteamInput()->GetDigitalActionData(inputHandle, actStart);
+        auto select = SteamInput()->GetDigitalActionData(inputHandle, actSelect);
         auto move = SteamInput()->GetAnalogActionData(inputHandle, actMove);
-        result |= fire.bState ? VGS0_JOYPAD_T2 : 0;
-        result |= jump.bState ? VGS0_JOYPAD_T1 : 0;
-        result |= pause.bState ? VGS0_JOYPAD_ST : 0;
+        result |= actA.bState ? VGS0_JOYPAD_T1 : 0;
+        result |= actB.bState ? VGS0_JOYPAD_T2 : 0;
+        result |= start.bState ? VGS0_JOYPAD_ST : 0;
+        result |= select.bState ? VGS0_JOYPAD_SE : 0;
         result |= move.x < 0 ? VGS0_JOYPAD_LE : 0;
         result |= 0 < move.x ? VGS0_JOYPAD_RI : 0;
         result |= move.y < 0 ? VGS0_JOYPAD_DW : 0;
@@ -87,9 +90,10 @@ class CSteam
     void deactivate()
     {
         this->act = 0;
-        this->actFire = 0;
-        this->actJump = 0;
-        this->actPause = 0;
+        this->actA = 0;
+        this->actB = 0;
+        this->actStart = 0;
+        this->actSelect = 0;
         this->actMove = 0;
     }
 
@@ -101,21 +105,27 @@ class CSteam
                 return false;
             }
         }
-        if (!this->actFire) {
-            this->actFire = SteamInput()->GetDigitalActionHandle("fire");
-            if (!this->actFire) {
+        if (!this->actA) {
+            this->actFire = SteamInput()->GetDigitalActionHandle("A");
+            if (!this->actA) {
                 return false;
             }
         }
-        if (!this->actJump) {
-            this->actJump = SteamInput()->GetDigitalActionHandle("jump");
-            if (!this->actJump) {
+        if (!this->actB) {
+            this->actB = SteamInput()->GetDigitalActionHandle("B");
+            if (!this->actB) {
                 return false;
             }
         }
-        if (!this->actPause) {
-            this->actPause = SteamInput()->GetDigitalActionHandle("pause");
-            if (!this->actPause) {
+        if (!this->actStart) {
+            this->actStart = SteamInput()->GetDigitalActionHandle("Start");
+            if (!this->actStart) {
+                return false;
+            }
+        }
+        if (!this->actSelect) {
+            this->actSelect = SteamInput()->GetDigitalActionHandle("Select");
+            if (!this->actSelect) {
                 return false;
             }
         }
