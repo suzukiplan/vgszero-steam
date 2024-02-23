@@ -134,6 +134,8 @@ Steamworks で設定する起動オプションは次の通りです。
 - Q. VisualStudio の IDE で動かしたい
   - A. (　･ω･)もきゅ？
   - _訳: Windows, Linux, macOS でリポジトリ共通化するには CLI ビルド環境がベストなため、Visual Studio Code などのプラットフォームフリーな IDE を利用してくだしあ_
+- Q. SteamCloud対応したい
+  - A. Steamworks の SteamCloud で サブディレクトリ `save`、パターン `*`、 OS `すべて` のルートパス設定をすれば、Windows、Linux、macOS の全ての OS で共通のセーブデータ（`save.dat`）がクラウドセーブされる形になります
 - Q. アチーブメント対応したい
   - A1. [./src/steam.hpp](./src/steam.hpp) にアチーブメント ID の送信処理を実装して、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
   - A2. アチーブメント送信のためのフック処理はセーブデータのコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
