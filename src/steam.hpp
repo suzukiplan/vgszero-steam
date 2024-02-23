@@ -3,7 +3,6 @@
  * License under GPLv3: https://github.com/suzukiplan/vgszero/blob/master/LICENSE-VGS0.txt
  * (C)2024, SUZUKI PLAN
  */
-#include "SDL.h"
 #include "../sdk/public/steam/steam_api.h"
 
 class CSteam
@@ -73,8 +72,8 @@ class CSteam
         auto start = SteamInput()->GetDigitalActionData(inputHandle, actStart);
         auto select = SteamInput()->GetDigitalActionData(inputHandle, actSelect);
         auto move = SteamInput()->GetAnalogActionData(inputHandle, actMove);
-        result |= actA.bState ? VGS0_JOYPAD_T1 : 0;
-        result |= actB.bState ? VGS0_JOYPAD_T2 : 0;
+        result |= a.bState ? VGS0_JOYPAD_T1 : 0;
+        result |= b.bState ? VGS0_JOYPAD_T2 : 0;
         result |= start.bState ? VGS0_JOYPAD_ST : 0;
         result |= select.bState ? VGS0_JOYPAD_SE : 0;
         result |= move.x < 0 ? VGS0_JOYPAD_LE : 0;
@@ -106,7 +105,7 @@ class CSteam
             }
         }
         if (!this->actA) {
-            this->actFire = SteamInput()->GetDigitalActionHandle("A");
+            this->actA = SteamInput()->GetDigitalActionHandle("A");
             if (!this->actA) {
                 return false;
             }
