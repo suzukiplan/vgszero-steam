@@ -1,11 +1,15 @@
 .DS_Store
 .vscode
 *.o
+*.obj
 game
+GAME.exe
+GAME.exe.manifest
 log.txt
 *.pdb
 *.iobj
 libsteam_api.*
+steam_api.dll
 RCa19072
 *.res
 save
