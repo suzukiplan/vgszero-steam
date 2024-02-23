@@ -48,7 +48,7 @@ sudo apt-get install libasound2-dev
 
 ターミナルで次のコマンドを実行して Steam 対応する game.pkg のリポジトリを準備してください。
 
-作成したリポジトリには OSS 化の義務が生じるため、必ず GitHub 等で public リポジトリとして公開してください。
+作成したリポジトリには OSS 化の義務が生じるため、必ず GitHub 等で public リポジトリとして公開してください。（※リポジトリ内に game.pkg のバイナリは含めなくても良い形になっています）
 
 ```bash
 # 本リポジトリを mygame-steam として取得
@@ -64,8 +64,8 @@ rm -rf .git
 rm .gitmodules
 rm -rf vgszero
 
-# README.md をクリア
-echo "# mygame" >README.md
+# README.md を削除
+rm README.md
 
 # .git を初期化
 git init
@@ -137,6 +137,12 @@ Steamworks で設定する起動オプションは次の通りです。
 - Q. アチーブメント対応したい
   - A1. [./src/steam.hpp](./src/steam.hpp) にアチーブメント ID の送信処理を実装して、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
   - A2. アチーブメント送信のためのフック処理はセーブデータのコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
+- Q. [Battle Marine のランディングページのようなもの](https://battle-marine.web.app/) をつくりたい
+  - A. Battle Marine のランディングページは Firebase Hosting を用いて配信するスタティック HTML です
+  - 複製リポジトリに `doc` ディレクトリを作成して html や css ファイルを配置
+  - GitHub Pages で `doc` ディレクトリを配信（※テスト）
+  - Firebase Hosting の GitHub Actions で `doc` ディレクトリを CDN 配信（※本番）
+  - なお、GitHub Pages での配信は商用配信に利用できないため、必ず Firebase Hosting やさくらインターネットなどの商用利用ができる CDN を利用してください（Firebase Hosting ならゲームが大ヒットしない限り通信コストが発生しないためオススメです）
 
 ## Licenses
 
