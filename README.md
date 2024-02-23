@@ -17,6 +17,70 @@ Steam で VGS-Zero のゲームを販売するための SDK です
   - Windows バイナリのみでも Proton で動作できる可能性がありますが、SUZUKIPLAN では Linux ネイティブ・バイナリでの SteamDeck 対応しか想定していないため、VGS-Zero の Proton での動作検証を実施していません
 - macOS は余力がある場合にのみ対応で問題無いものと思われます
 
+## Prerequest
+
+### Windows
+
+- Visual Studio (なるべく新しいバージョン)
+  - コマンドライン環境のみ利用します（Visual Studio の IDE は使いません）
+- git (なるべく新しいバージョン)
+
+### Linux
+
+```bash
+# install GNU Make, GCC and other
+sudo apt install build-essential
+
+# install SDL2
+sudo apt-get install libsdl2-dev
+
+# install ALSA
+sudo apt-get install libasound2
+sudo apt-get install libasound2-dev
+```
+
+### macOS
+
+- HomeBrew
+- XCODE Command Line Tools
+
+## Setup Project
+
+ターミナルで次のコマンドを実行して Steam 対応する game.pkg のリポジトリを準備してください。
+
+作成したリポジトリには OSS 化の義務が生じるため、必ず GitHub 等で public リポジトリとして公開してください。
+
+```bash
+# 本リポジトリを mygame-steam として取得
+git clone https://github.com/suzukiplan/vgszero-steam mygame-steam
+
+# ディレクトリ移動
+cd mygame-steam
+
+# .git を削除
+rm -rf .git
+
+# submodule を一旦削除
+rm .gitmodules
+rm -rf vgszero
+
+# README.md をクリア
+echo "# mygame" >README.md
+
+# .git を初期化
+git init
+
+# サブモジュールを追加
+git submodule add https://github.com/suzukiplan/vgszero
+
+# commit
+git add -A
+git commit -m "initial commit"
+```
+
+> 上記は `bash` 前提で記述しています。
+> Windows の場合は `rm` を `DEL /S /Q` に置き換えれば同様の操作ができる筈です。
+
 ## How to Build
 
 1. Steamworks で App クレジットを購入して AppID を入手
@@ -24,7 +88,8 @@ Steam で VGS-Zero のゲームを販売するための SDK です
 3. 販売する `game.pkg` をこのリポジトリ直下に配置
 4. `steam_appid.txt` を作成して AppID を記述
 5. [`./game_actions_X.vdf`](./game_actions_X.vdf) を Steam クライアントのインストール先の `controller_config` にコピーして `X` の箇所を AppID にリネーム
-6. `make` (Windows の場合は `nmake /f Makefile.Win32`) を実行
+6. Windows の場合、アイコンファイルを差し替え（[./src/icon016.ico](./src/icon016.ico), [./src/icon032.ico](./src/icon032.ico), [./src/icon256.ico](./src/icon256.ico)）
+7. `make` (Windows の場合は `make.bat`) を実行
 
 ## Game Contorller Setup
 
@@ -53,9 +118,29 @@ Steamworks で設定する起動オプションは次の通りです。
 
 > Linux は SteamDeck 限定で対応する場合、起動オプションに `-g Vulkan` を指定することでパフォーマンスが良くなります。
 
+## FAQ
+
+- Q. ビルドが成功したが起動しない
+  - A. steam_appid.txt が正しいかご確認ください
+- Q. 落ちるetc
+  - A. log.txt をご確認ください
+- Q. ジョイパッドが効かない
+  - A. ジョイパッドの入力は Steam クライアントから起動して SteamInput の設定でレイアウトを指定することで利用できるようになります。詳細は Steamworks で公開されている SteamInput のマニュアルをご確認ください。
+- Q. なにゆえ SteamInput？ (XInputｶﾞﾖｶｯﾀﾉﾆ...)
+  - A1. SteamDeck の互換性審査を通すため
+  - A2. OS 毎のゲームパッド対応が魔窟
+- Q. バグを見つけた
+  - A. [issues](https://github.com/suzukiplan/vgszero-steam/issues) でチケットを切って [twitter@suzukiplan](https://twitter.com/suzukiplan) までご連絡ください
+- Q. VisualStudio の IDE で動かしたい
+  - A. (　･ω･)もきゅ？
+  - _訳: Windows, Linux, macOS でリポジトリ共通化するには CLI ビルド環境がベストなため、Visual Studio Code などのプラットフォームフリーな IDE を利用してくだしあ_
+- Q. アチーブメント対応したい
+  - A1. [./src/steam.hpp](./src/steam.hpp) にアチーブメント ID の送信処理を実装して、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
+  - A2. アチーブメント送信のためのフック処理はセーブデータのコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
+
 ## Licenses
 
-販売時に同梱する README.txt や製品のランディングページ等に次のライセンス情報を必ず記載してください。
+販売時に同梱する [./README.txt](./README.txt) や製品のランディングページ等に次のライセンス情報を必ず記載してください。
 
 - [PicoJSON - a C++ JSON parser / serializer](./LICENSE-PICOJSON.txt) ※Windowsのみ
 - [Simple DirectMedia Layer](./LICENSE-SDL.txt) ※Linux/macOSのみ
