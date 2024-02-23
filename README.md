@@ -44,6 +44,11 @@ sudo apt-get install libasound2-dev
 - HomeBrew
 - XCODE Command Line Tools
 
+```bash
+# install SDL2
+brew install sdl2
+```
+
 ## Setup Project
 
 ターミナルで次のコマンドを実行して Steam 対応する game.pkg のリポジトリを準備してください。
