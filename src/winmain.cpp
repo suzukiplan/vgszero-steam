@@ -107,7 +107,7 @@ static void putlog(const char* msg, ...)
     time_t t1;
     struct tm* t2;
 
-    CreateDirectory("save");
+    CreateDirectoryA("save", nullptr);
     if (NULL == (fp = fopen("log.txt", "a"))) {
         return;
     }
@@ -218,7 +218,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _windowY = CW_USEDEFAULT;
     _windowWidth = VRAM_WIDTH_LOW;
     _windowHeight = VRAM_HEIGHT_LOW;
-    _isFullScreen = false;
+    _isFullScreen = true;
     _isAspectFit = true;
     _resolution = Resolution::High;
     std::ifstream ifs("config.json", std::ios::in);
