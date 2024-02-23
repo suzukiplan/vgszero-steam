@@ -216,8 +216,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     reset_keyboard_assign();
     _windowX = CW_USEDEFAULT;
     _windowY = CW_USEDEFAULT;
-    _windowWidth = VRAM_WIDTH_LOW;
-    _windowHeight = VRAM_HEIGHT_LOW;
+    _windowWidth = VRAM_WIDTH_HIGH;
+    _windowHeight = VRAM_HEIGHT_HIGH;
     _isFullScreen = true;
     _isAspectFit = true;
     _resolution = Resolution::High;
