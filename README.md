@@ -48,8 +48,6 @@ sudo apt-get install libasound2-dev
 
 ターミナルで次のコマンドを実行して Steam 対応する game.pkg のリポジトリを準備してください。
 
-作成したリポジトリには OSS 化の義務が生じるため、必ず GitHub 等で public リポジトリとして公開してください。（※リポジトリ内に game.pkg のバイナリは含めなくても良い形になっています）
-
 ```bash
 # 本リポジトリを mygame-steam として取得
 git clone https://github.com/suzukiplan/vgszero-steam mygame-steam
@@ -80,6 +78,12 @@ git commit -m "initial commit"
 
 > 上記は `bash` 前提で記述しています。
 > Windows の場合は `rm` を `DEL /S /Q` に置き換えれば同様の操作ができる筈です。
+
+（Remarks）
+
+- 作成したリポジトリには OSS 化の義務が生じるため、必ず GitHub 等で public リポジトリとして公開してください
+- リポジトリ内に game.pkg のバイナリは含めなくても良い形になっています
+- リポジトリは OS 毎に分割する必要がありません
 
 ## How to Build
 
