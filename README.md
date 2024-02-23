@@ -125,7 +125,7 @@ Steamworks で設定する起動オプションは次の通りです。
   - 実行ファイル: `game`
   - 引数: `-g Metal`
 
-> Linux は SteamDeck 限定で対応する場合、起動オプションに `-g Vulkan` を指定することでパフォーマンスが良くなります。
+> Linux は SteamDeck 限定で対応する場合、起動オプションに `-g Vulkan` を指定することでパフォーマンスが良くなりますが、通常の Linux (公式には Ubuntu のみ) もサポートしたい場合デフォルト（OpenGL）の指定を推奨します。そもそも、VGS-Zero ではフレームバッファによる 2D 描画しかしないため OpenGL でも性能上の問題は全く問題なく、2013 年モデルの MacBook Air にインストールした Ubuntu でも 60FPS で安定的に動作します。
 
 ## FAQ
 
