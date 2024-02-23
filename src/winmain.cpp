@@ -107,6 +107,7 @@ static void putlog(const char* msg, ...)
     time_t t1;
     struct tm* t2;
 
+    CreateDirectory("save");
     if (NULL == (fp = fopen("log.txt", "a"))) {
         return;
     }
@@ -336,7 +337,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     vgs0.saveCallback = [](VGS0* vgs0, const void* data, size_t size) -> bool {
-        FILE* fp = fopen("save.dat", "wb");
+        FILE* fp = fopen("save/save.dat", "wb");
         if (!fp)
             return false;
         bool result = size == fwrite(data, 1, size, fp);
@@ -344,7 +345,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return result;
     };
     vgs0.loadCallback = [](VGS0* vgs0, void* data, size_t size) -> bool {
-        FILE* fp = fopen("save.dat", "rb");
+        FILE* fp = fopen("save/save.dat", "rb");
         if (!fp)
             return false;
         bool result = size = fread(data, 1, size, fp);
