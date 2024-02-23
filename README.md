@@ -146,8 +146,9 @@ Steamworks で設定する起動オプションは次の通りです。
 - Q. SteamCloud対応したい
   - A. Steamworks の SteamCloud で サブディレクトリ `save`、パターン `*`、 OS `すべて` のルートパス設定をすれば、Windows、Linux、macOS の全ての OS で共通のセーブデータ（`save.dat`）がクラウドセーブされる形になります
 - Q. アチーブメント対応したい
-  - A1. [./src/steam.hpp](./src/steam.hpp) にアチーブメント ID の送信処理を実装して、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
-  - A2. アチーブメント送信のためのフック処理はセーブデータ保存のコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
+  - A. Steamworks でアチーブメントを登録後、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
+  - アチーブメント送信のためのフック処理はセーブデータ保存のコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
+  - アチーブメントは `CSteam::unlock` に Steamworks で設定したアチーブメント ID を指定すれば送信できます。
 - Q. リーダーボード対応したい
   - A. アチーブメントとだいたい同じ要領で対応できます
 - Q. [Battle Marine のランディングページのようなもの](https://battle-marine.web.app/) をつくりたい

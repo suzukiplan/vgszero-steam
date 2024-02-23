@@ -85,6 +85,20 @@ class CSteam
 
     inline bool isOverlay() { return this->overlay; }
 
+    void unlock(const char* name)
+    {
+        if (!this->initialized) {
+            return;
+        }
+        if (!SteamUserStats()->SetAchievement(name)) {
+            putlog("SteamUserStats::SetAchievement(%s) failed!", name);
+        } else {
+            if (!SteamUserStats()->StoreStats()) {
+                putlog("SteamUserStats::StoreStats failed!");
+            }
+        }
+    }
+
   private:
     void deactivate()
     {
