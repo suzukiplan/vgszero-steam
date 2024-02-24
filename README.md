@@ -13,8 +13,10 @@ Steam で VGS-Zero のゲームを販売するための SDK です
 - ビルドと動作確認には各 OS の実機 PC が必要です（仮想環境については SUZUKIPLAN では検証していません）
 - 最低でも Windows と Linux に対応することを推奨します。
   - Windows は利用ユーザーが多いため対応することで売上が向上するものと思われます
-  - Linux に対応することで SteamDeck 互換性審査をパスできる可能性があがるものと想定
-  - Windows バイナリのみでも Proton で動作できる可能性がありますが、SUZUKIPLAN では Linux ネイティブ・バイナリでの SteamDeck 対応しか想定していないため、VGS-Zero の Proton での動作検証を実施していません
+  - Linux に対応するメリット:
+    - SteamDeck 互換性審査をパスできる可能性があがる
+    - ユーザの手間が減る（Proton ランタイムをインストールが不要）
+    - オーバーヘッド緩和により SteamDeck のバッテリー消耗を抑えられる
 - macOS は余力がある場合にのみ対応で問題無いものと思われます
 
 ## Prerequest
