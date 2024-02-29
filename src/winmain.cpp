@@ -16,6 +16,7 @@
 #include "steam.hpp"
 
 #include <Windows.h>
+#include <chrono>
 #include <commctrl.h>
 #include <d3d9.h>
 #include <dinput.h>
@@ -64,6 +65,7 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK VirtualKeyboard(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK KeyConfigKeyboard(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK ScreenResolution(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK VolumeControl(HWND, UINT, WPARAM, LPARAM);
 
 enum class Resolution {
     High,
@@ -79,6 +81,9 @@ static int _windowX;
 static int _windowY;
 static int _windowWidth;
 static int _windowHeight;
+static bool _useVsync = false;
+static int _volumeBgm;
+static int _volumeSe;
 static HWND hWnd;
 static HMENU hMenu;
 static BOOL isHEL = FALSE;
@@ -134,6 +139,8 @@ static void save_config()
     basic.insert(std::make_pair("windowHeight", picojson::value((double)_windowHeight)));
     basic.insert(std::make_pair("isFullScreen", picojson::value(_isFullScreen)));
     basic.insert(std::make_pair("isAspectFit", picojson::value(_isAspectFit)));
+    basic.insert(std::make_pair("volumeBgm", picojson::value((double)_volumeBgm)));
+    basic.insert(std::make_pair("volumeSe", picojson::value((double)_volumeSe)));
     switch (_resolution) {
         case Resolution::High:
             basic.insert(std::make_pair("resolution", picojson::value("high")));
@@ -221,6 +228,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _isFullScreen = true;
     _isAspectFit = true;
     _resolution = Resolution::High;
+    _volumeBgm = 100;
+    _volumeSe = 100;
     std::ifstream ifs("config.json", std::ios::in);
     if (ifs.fail()) {
         putlog("File not found (use default settings)");
@@ -273,6 +282,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                     _resolution = Resolution::Tiny;
                 } else {
                     _resolution = Resolution::High;
+                }
+            }
+            if (basic.find("volumeBgm")->second.is<double>()) {
+                _volumeBgm = (int)basic["volumeBgm"].get<double>();
+                if (_volumeBgm < 0) {
+                    _volumeBgm = 0;
+                } else if (100 < _volumeBgm) {
+                    _volumeBgm = 100;
+                }
+            }
+            if (basic.find("volumeSe")->second.is<double>()) {
+                _volumeSe = (int)basic["volumeSe"].get<double>();
+                if (_volumeSe < 0) {
+                    _volumeSe = 0;
+                } else if (100 < _volumeSe) {
+                    _volumeSe = 100;
                 }
             }
             if (basic.find("key_config")->second.is<picojson::object>()) {
@@ -335,6 +360,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         putlog("Loading SE (%u bytes)", seSize);
         vgs0.loadSoundEffect(se, seSize);
     }
+    vgs0.setBgmVolume(_volumeBgm);
+    vgs0.setSeVolume(_volumeSe);
+    putlog("Initial Volume Settings: bgm=%d, se=%d", _volumeBgm, _volumeSe);
 
     vgs0.saveCallback = [](VGS0* vgs0, const void* data, size_t size) -> bool {
         FILE* fp = fopen("save/save.dat", "wb");
@@ -359,8 +387,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     init_sound();
 
     need_restore = 0;
-    DWORD wt[3] = {17, 17, 16};
-    int wi = 0;
 
     putlog("Start mainloop");
     MSG msg;
@@ -404,7 +430,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     bool connected = false;
     bool previousConnected = false;
     while (TRUE) {
-        DWORD t1 = timeGetTime();
+        auto start = std::chrono::system_clock::now();
         loopCounter++;
         loopCounter &= 0x7FFFFFFF;
         if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -505,13 +531,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             need_restore = 1;
             continue;
         }
-        if (isHEL) {
-            DWORD t2 = timeGetTime() - t1;
-            if (t2 < wt[wi]) {
-                Sleep(wt[wi] - t2);
+        if (!_useVsync) {
+            std::chrono::duration<double> diff = std::chrono::system_clock::now() - start;
+            int us = (int)(diff.count() * 1000000);
+            if (us < 16666) {
+                int ms = (16666 - us) / 1000;
+                if (0 < ms) {
+                    timeBeginPeriod(1);
+                    Sleep(ms);
+                    timeEndPeriod(1);
+                }
             }
-            wi++;
-            wi %= 3;
         }
     }
 
@@ -623,6 +653,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         ShowCursor(TRUE);
                     }
                     DialogBox(hInst, MAKEINTRESOURCE(IDD_DIALOG_RESOLUTION), hWnd, ScreenResolution);
+                    if (_isFullScreen) {
+                        ShowCursor(FALSE);
+                    }
+                    break;
+                case IDM_VOLUME_CONTROL:
+                    if (_isFullScreen) {
+                        ShowCursor(TRUE);
+                    }
+                    DialogBox(hInst, MAKEINTRESOURCE(IDD_VOLUME_SLIDER), hWnd, VolumeControl);
                     if (_isFullScreen) {
                         ShowCursor(FALSE);
                     }
@@ -1072,6 +1111,54 @@ INT_PTR CALLBACK ScreenResolution(HWND hDlg, UINT message, WPARAM wParam, LPARAM
     return (INT_PTR)FALSE;
 }
 
+INT_PTR CALLBACK VolumeControl(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message) {
+        case WM_INITDIALOG: {
+            SendDlgItemMessage(hDlg, IDC_SLIDER_BGM, TBM_SETRANGE, false, MAKELPARAM(0, 100));
+            SendDlgItemMessage(hDlg, IDC_SLIDER_SE, TBM_SETRANGE, false, MAKELPARAM(0, 100));
+            SendDlgItemMessage(hDlg, IDC_SLIDER_BGM, TBM_SETPOS, true, _volumeBgm);
+            SendDlgItemMessage(hDlg, IDC_SLIDER_SE, TBM_SETPOS, true, _volumeSe);
+            char vtext[16];
+            sprintf(vtext, "%d%", _volumeBgm);
+            SetDlgItemTextA(hDlg, IDC_TEXT_BGM, vtext);
+            sprintf(vtext, "%d%", _volumeSe);
+            SetDlgItemTextA(hDlg, IDC_TEXT_SE, vtext);
+            return (INT_PTR)TRUE;
+        }
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                EndDialog(hDlg, LOWORD(wParam));
+                return (INT_PTR)TRUE;
+            }
+            break;
+        case WM_HSCROLL: {
+            if (GetDlgItem(hDlg, IDC_SLIDER_BGM) == (HWND)lParam) {
+                _volumeBgm = SendDlgItemMessage(hDlg, IDC_SLIDER_BGM, TBM_GETPOS, NULL, NULL);
+                lock();
+                vgs0.setBgmVolume(_volumeBgm);
+                unlock();
+                char vtext[16];
+                sprintf(vtext, "%d%", _volumeBgm);
+                SetDlgItemTextA(hDlg, IDC_TEXT_BGM, vtext);
+            } else if (GetDlgItem(hDlg, IDC_SLIDER_SE) == (HWND)lParam) {
+                _volumeSe = SendDlgItemMessage(hDlg, IDC_SLIDER_SE, TBM_GETPOS, NULL, NULL);
+                lock();
+                vgs0.setSeVolume(_volumeSe);
+                unlock();
+                char vtext[16];
+                sprintf(vtext, "%d%", _volumeSe);
+                SetDlgItemTextA(hDlg, IDC_TEXT_SE, vtext);
+            }
+            break;
+        }
+        case WM_CLOSE:
+            EndDialog(hDlg, LOWORD(wParam));
+            return (INT_PTR)TRUE;
+    }
+    return (INT_PTR)FALSE;
+}
+
 static int ginit(HWND hWnd)
 {
     D3DDISPLAYMODE dm;
@@ -1085,8 +1172,8 @@ static int ginit(HWND hWnd)
     }
 
     _lpD3D->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &dm);
-    putlog("Adapter display mode: Format=0x%X, Width=%d, Height=%d, RefreshRate=%dHz", dm.Format, dm.Width, dm.Height, dm.RefreshRate);
-
+    _useVsync = 60 == dm.RefreshRate; // use v-sync if 60Hz
+    putlog("Adapter display mode: Format=0x%X, Width=%d, Height=%d, RefreshRate=%dHz, waitMethod=%s", dm.Format, dm.Width, dm.Height, dm.RefreshRate, _useVsync ? "Vsync" : "Sleep");
     memset(&dprm, 0, sizeof(dprm));
     dprm.Windowed = TRUE;
     dprm.FullScreen_RefreshRateInHz = 0;
@@ -1109,7 +1196,7 @@ static int ginit(HWND hWnd)
     dprm.BackBufferFormat = dm.Format;
     dprm.EnableAutoDepthStencil = TRUE;
     dprm.AutoDepthStencilFormat = D3DFMT_D16;
-    dprm.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+    dprm.PresentationInterval = _useVsync ? D3DPRESENT_INTERVAL_DEFAULT : D3DPRESENT_INTERVAL_IMMEDIATE;
     dprm.Flags = D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
 
     do {

@@ -152,11 +152,12 @@ Steamworks で設定する起動オプションは次の通りです。
   - アチーブメント送信のためのフック処理はセーブデータ保存のコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
   - アチーブメントは `CSteam::unlock` に Steamworks で設定したアチーブメント ID を指定すれば送信できます。
 - Q. リーダーボード対応したい
-  - A. アチーブメントとだいたい同じ要領で対応できます
+  - A. `CSteam::init` の第一引数に Steamworks で設置したリーダーボード ID の文字列を指定して初期化後、`CSteam::sendScore` を実行すればリーダーボードにスコアを登録できます。
+  - `CSteam::sendScore` はあまり高頻度に実行すると Steam のサーバーからブロックされる場合があるので、スコアを更新したタイミングでのみ実行するようにしてください。（目安として 10 分間に 10 回以下の呼び出しを推奨）
 - Q. アチーブメントの判定やリーダーボードの送信処理のソースコードは公開したくないのだが
   - A. 公開したくない処理を DLL や共有ライブラリにして分割してそれを呼び出す形にしてください
 - Q. [Battle Marine のランディングページのようなもの](https://battle-marine.web.app/) をつくりたい
-  - A. Battle Marine のランディングページは Firebase Hosting を用いて配信しているスタティック HTML+CSS です
+  - A. Battle Marine のランディングページは Firebase Hosting を用いて配信している[スタティック HTML+CSS](https://github.com/suzukiplan/bmarine-zero/tree/master/docs) です
   - 複製リポジトリに `doc` ディレクトリを作成して html や css ファイルを配置して `commit`
   - GitHub Pages で `doc` ディレクトリを配信（※テスト）
   - Firebase Hosting の GitHub Actions で `doc` ディレクトリを CDN 配信（※本番）
