@@ -13,8 +13,10 @@ Steam で VGS-Zero のゲームを販売するための SDK です
 - ビルドと動作確認には各 OS の実機 PC が必要です（仮想環境については SUZUKIPLAN では検証していません）
 - 最低でも Windows と Linux に対応することを推奨します。
   - Windows は利用ユーザーが多いため対応することで売上が向上するものと思われます
-  - Linux に対応することで SteamDeck 互換性審査をパスできる可能性があがるものと想定
-  - Windows バイナリのみでも Proton で動作できる可能性がありますが、SUZUKIPLAN では Linux ネイティブ・バイナリでの SteamDeck 対応しか想定していないため、VGS-Zero の Proton での動作検証を実施していません
+  - Linux に対応するメリット:
+    - SteamDeck 互換性審査をパスできる可能性があがる
+    - ユーザの手間が減る（Proton ランタイムをインストールが不要）
+    - オーバーヘッド緩和により SteamDeck のバッテリー消耗を抑えられる
 - macOS は余力がある場合にのみ対応で問題無いものと思われます
 
 ## Prerequest
@@ -43,6 +45,11 @@ sudo apt-get install libasound2-dev
 
 - HomeBrew
 - XCODE Command Line Tools
+
+```bash
+# install SDL2
+brew install sdl2
+```
 
 ## Setup Project
 
@@ -120,7 +127,7 @@ Steamworks で設定する起動オプションは次の通りです。
   - 実行ファイル: `game`
   - 引数: `-g Metal`
 
-> Linux は SteamDeck 限定で対応する場合、起動オプションに `-g Vulkan` を指定することでパフォーマンスが良くなります。
+> Linux は SteamDeck 限定で対応する場合、起動オプションに `-g Vulkan` を指定することでパフォーマンスが良くなりますが、通常の Linux (公式には Ubuntu のみ) もサポートしたい場合デフォルト（OpenGL）の指定を推奨します。そもそも、VGS-Zero ではフレームバッファによる 2D 描画しかしないため OpenGL でも性能上の問題は全く問題なく、2013 年モデルの MacBook Air にインストールした Ubuntu でも 60FPS で安定的に動作します。
 
 ## FAQ
 
@@ -141,8 +148,13 @@ Steamworks で設定する起動オプションは次の通りです。
 - Q. SteamCloud対応したい
   - A. Steamworks の SteamCloud で サブディレクトリ `save`、パターン `*`、 OS `すべて` のルートパス設定をすれば、Windows、Linux、macOS の全ての OS で共通のセーブデータ（`save.dat`）がクラウドセーブされる形になります
 - Q. アチーブメント対応したい
-  - A1. [./src/steam.hpp](./src/steam.hpp) にアチーブメント ID の送信処理を実装して、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
-  - A2. アチーブメント送信のためのフック処理はセーブデータのコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
+  - A. Steamworks でアチーブメントを登録後、[./src/winmain.cpp](./src/winmain.cpp) と [./src/sdlmain.cpp](./src/sdlmain.cpp) にアチーブメント送信のためのフック処理を実装してください
+  - アチーブメント送信のためのフック処理はセーブデータ保存のコールバックでセーブデータの変化内容をバイナリチェックして送信する形（セーブデータとアチーブメント実績を一致させる形）が望ましいと考えられます
+  - アチーブメントは `CSteam::unlock` に Steamworks で設定したアチーブメント ID を指定すれば送信できます。
+- Q. リーダーボード対応したい
+  - A. アチーブメントとだいたい同じ要領で対応できます
+- Q. アチーブメントの判定やリーダーボードの送信処理のソースコードは公開したくないのだが
+  - A. 公開したくない処理を DLL や共有ライブラリにして分割してそれを呼び出す形にしてください
 - Q. [Battle Marine のランディングページのようなもの](https://battle-marine.web.app/) をつくりたい
   - A. Battle Marine のランディングページは Firebase Hosting を用いて配信しているスタティック HTML+CSS です
   - 複製リポジトリに `doc` ディレクトリを作成して html や css ファイルを配置して `commit`

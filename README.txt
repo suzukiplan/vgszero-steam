@@ -47,7 +47,8 @@ How to Play
 
 Contact us
 
-<<<Twitter（通称X）のアカウントなどを記載>>>
+1. Twitter: <<<Twitter（通称X）のアカウントなどを記載>>>
+2. GitHub: <<<複製リポジトリのissuesへのリンクを記載>>>
 
 Licenses
 
