@@ -16,6 +16,7 @@
 #include "steam.hpp"
 
 #include <Windows.h>
+#include <chrono>
 #include <commctrl.h>
 #include <d3d9.h>
 #include <dinput.h>
@@ -79,6 +80,7 @@ static int _windowX;
 static int _windowY;
 static int _windowWidth;
 static int _windowHeight;
+static bool _useVsync = false;
 static HWND hWnd;
 static HMENU hMenu;
 static BOOL isHEL = FALSE;
@@ -359,8 +361,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     init_sound();
 
     need_restore = 0;
-    DWORD wt[3] = {17, 17, 16};
-    int wi = 0;
 
     putlog("Start mainloop");
     MSG msg;
@@ -404,7 +404,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     bool connected = false;
     bool previousConnected = false;
     while (TRUE) {
-        DWORD t1 = timeGetTime();
+        auto start = std::chrono::system_clock::now();
         loopCounter++;
         loopCounter &= 0x7FFFFFFF;
         if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE)) {
@@ -505,13 +505,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             need_restore = 1;
             continue;
         }
-        if (isHEL) {
-            DWORD t2 = timeGetTime() - t1;
-            if (t2 < wt[wi]) {
-                Sleep(wt[wi] - t2);
+        if (!_useVsync) {
+            std::chrono::duration<double> diff = std::chrono::system_clock::now() - start;
+            int us = (int)(diff.count() * 1000000);
+            if (us < 16666) {
+                int ms = (16666 - us) / 1000;
+                if (0 < ms) {
+                    timeBeginPeriod(1);
+                    Sleep(ms);
+                    timeEndPeriod(1);
+                }
             }
-            wi++;
-            wi %= 3;
         }
     }
 
@@ -1085,8 +1089,8 @@ static int ginit(HWND hWnd)
     }
 
     _lpD3D->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &dm);
-    putlog("Adapter display mode: Format=0x%X, Width=%d, Height=%d, RefreshRate=%dHz", dm.Format, dm.Width, dm.Height, dm.RefreshRate);
-
+    _useVsync = 60 == dm.RefreshRate; // use v-sync if 60Hz
+    putlog("Adapter display mode: Format=0x%X, Width=%d, Height=%d, RefreshRate=%dHz, waitMethod=%s", dm.Format, dm.Width, dm.Height, dm.RefreshRate, _useVsync ? "Vsync" : "Sleep");
     memset(&dprm, 0, sizeof(dprm));
     dprm.Windowed = TRUE;
     dprm.FullScreen_RefreshRateInHz = 0;
@@ -1109,7 +1113,7 @@ static int ginit(HWND hWnd)
     dprm.BackBufferFormat = dm.Format;
     dprm.EnableAutoDepthStencil = TRUE;
     dprm.AutoDepthStencilFormat = D3DFMT_D16;
-    dprm.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+    dprm.PresentationInterval = _useVsync ? D3DPRESENT_INTERVAL_DEFAULT : D3DPRESENT_INTERVAL_IMMEDIATE;
     dprm.Flags = D3DPRESENTFLAG_LOCKABLE_BACKBUFFER;
 
     do {
