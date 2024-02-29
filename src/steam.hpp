@@ -10,6 +10,7 @@ class CSteam
   private:
     bool initialized;
     bool overlay;
+    bool leaderboardFound;
     void (*putlog)(const char*, ...);
     InputActionSetHandle_t act;
     InputAnalogActionHandle_t actMove;
@@ -18,6 +19,11 @@ class CSteam
     InputDigitalActionHandle_t actStart;
     InputDigitalActionHandle_t actSelect;
     STEAM_CALLBACK_MANUAL(CSteam, onGameOverlayActivated, GameOverlayActivated_t, callbackGameOverlayActivated);
+    SteamLeaderboard_t currentLeaderboard;
+    void onFindLeaderboard(LeaderboardFindResult_t* callback, bool failed);
+    CCallResult<CSteam, LeaderboardFindResult_t> callResultFindLeaderboard;
+    void onUploadScore(LeaderboardScoreUploaded_t* callback, bool failed);
+    CCallResult<CSteam, LeaderboardScoreUploaded_t> callResultUploadLeaderboardScore;
 
   public:
     CSteam(void (*putlog)(const char*, ...))
@@ -25,6 +31,7 @@ class CSteam
         this->putlog = putlog;
         this->initialized = false;
         this->overlay = false;
+        this->leaderboardFound = false;
         this->deactivate();
     }
 
@@ -36,7 +43,7 @@ class CSteam
         }
     }
 
-    void init()
+    void init(const char* leaderboard = nullptr)
     {
         putlog("Initializing Steam...");
         if (!SteamAPI_Init()) {
@@ -49,6 +56,10 @@ class CSteam
             callbackGameOverlayActivated.Register(this, &CSteam::onGameOverlayActivated);
             if (!SteamInput()->Init(true)) {
                 putlog("SteamInput::Init failed!");
+            }
+            if (leaderboard) {
+                auto hdl = SteamUserStats()->FindLeaderboard(leaderboard);
+                this->callResultFindLeaderboard.Set(hdl, this, &CSteam::onFindLeaderboard);
             }
         }
     }
@@ -97,6 +108,19 @@ class CSteam
                 putlog("SteamUserStats::StoreStats failed!");
             }
         }
+    }
+
+    void sendScore(int score)
+    {
+        if (!this->initialized) {
+            return;
+        }
+        if (!this->leaderboardFound) {
+            putlog("Score was not send to the leadboard (leadboard not found)");
+            return;
+        }
+        auto hdl = SteamUserStats()->UploadLeaderboardScore(this->currentLeaderboard, k_ELeaderboardUploadScoreMethodKeepBest, score, nullptr, 0);
+        this->callResultUploadLeaderboardScore.Set(hdl, this, &CSteam::onUploadScore);
     }
 
   private:
@@ -155,4 +179,26 @@ class CSteam
 void CSteam::onGameOverlayActivated(GameOverlayActivated_t* args)
 {
     this->overlay = args->m_bActive;
+}
+
+void CSteam::onFindLeaderboard(LeaderboardFindResult_t* callback, bool failed)
+{
+    if (failed || !callback || !callback->m_bLeaderboardFound) {
+        putlog("onFindLeaderboard: leaderboard not found or error");
+    } else {
+        this->currentLeaderboard = callback->m_hSteamLeaderboard;
+        this->leaderboardFound = true;
+        putlog("Leadboard found");
+    }
+}
+
+void CSteam::onUploadScore(LeaderboardScoreUploaded_t* callback, bool failed)
+{
+    if (failed || !callback || !callback->m_bSuccess) {
+        putlog("onUploadScore: cannot register to the leaderboard");
+    } else {
+        if (callback->m_bScoreChanged) {
+            putlog("score: %d, ranking: %d -> %d", callback->m_nScore, callback->m_nGlobalRankPrevious, callback->m_nGlobalRankNew);
+        }
+    }
 }
