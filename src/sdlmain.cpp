@@ -1,5 +1,5 @@
 /**
- * VGS-Zero SDK for Steam
+ * VGS-Zero SDK for Steam/SDL with GPU mode
  * License under GPLv3: https://github.com/suzukiplan/vgszero/blob/master/LICENSE-VGS0.txt
  * (C)2024, SUZUKI PLAN
  */
@@ -7,7 +7,7 @@
 #include "gamepkg.h"
 #include "../vgszero/src/core/vgs0.hpp"
 #include "steam.hpp"
-
+#include "sdlconf.hpp"
 #include <chrono>
 #include <map>
 #include <pthread.h>
@@ -33,7 +33,7 @@ static pthread_mutex_t soundMutex = PTHREAD_MUTEX_INITIALIZER;
 static bool halt = false;
 static CSteam* steam = nullptr;
 
-static void log(const char* format, ...)
+void log(const char* format, ...)
 {
     FILE* fp = fopen("log.txt", "a");
     if (!fp) return;
@@ -93,8 +93,10 @@ int main(int argc, char* argv[])
                     gpuType = SDL_WINDOW_OPENGL;
                 } else if (0 == strcasecmp(argv[i], "Vulkan")) {
                     gpuType = SDL_WINDOW_VULKAN;
+#ifdef DARWIN
                 } else if (0 == strcasecmp(argv[i], "Metal")) {
                     gpuType = SDL_WINDOW_METAL;
+#endif
                 } else if (0 == strcasecmp(argv[i], "None")) {
                     gpuType = 0;
                 }
@@ -108,14 +110,16 @@ int main(int argc, char* argv[])
         }
     }
 #ifdef DARWIN
-    gpuType |= SDL_WINDOW_ALLOW_HIGHDPI; // retina
+    gpuType |= SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
 
     if (cliError) {
         puts("usage: bmarine [-g { None .............. GPU: Do not use");
         puts("                   | OpenGL ............ GPU: OpenGL <default>");
         puts("                   | Vulkan ............ GPU: Vulkan");
+#ifdef DARWIN
         puts("                   | Metal ............. GPU: Metal");
+#endif
         puts("                   }]");
         return 1;
     }
@@ -124,6 +128,7 @@ int main(int argc, char* argv[])
     SDL_version sdlVersion;
     SDL_GetVersion(&sdlVersion);
     log("SDL version: %d.%d.%d", sdlVersion.major, sdlVersion.minor, sdlVersion.patch);
+    Config cfg;
 
     steam = new CSteam(log);
     steam->init();
@@ -137,24 +142,36 @@ int main(int argc, char* argv[])
     // create window & renderer
     SDL_DisplayMode display;
     SDL_GetCurrentDisplayMode(0, &display);
-    log("Screen Resolution: w=%d, h=%d", display.w, display.h);
+    log("Screen Resolution: width=%d, height=%d", display.w, display.h);
     SDL_Window* window;
     SDL_Renderer* renderer;
-    if (0 !=SDL_CreateWindowAndRenderer(display.w, display.h, gpuType | SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
+    if (cfg.graphic.isFullScreen) {
+        gpuType |= SDL_WINDOW_FULLSCREEN;
+    }
+    if (0 !=SDL_CreateWindowAndRenderer(cfg.graphic.isFullScreen ? display.w : cfg.graphic.windowWidth,
+                                        cfg.graphic.isFullScreen ? display.h : cfg.graphic.windowHeight,
+                                        gpuType,
+                                        &window,
+                                        &renderer)) {
         log("SDL_CreateWindowAndRenderer failed: %s", SDL_GetError());
         exit(-1);
     }
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_RenderClear(renderer);
     SDL_ShowCursor(SDL_DISABLE);
+    SDL_RenderPresent(renderer);
 
-    // create texture
-    double sw = display.w / 480.0;
-    double sh = display.h / 384.0;
+    double sw = (cfg.graphic.isFullScreen ? display.w : cfg.graphic.windowWidth) / 480.0;
+    double sh = (cfg.graphic.isFullScreen ? display.h : cfg.graphic.windowHeight) / 384.0;
     double scale = sw < sh ? sw : sh;
-    int frameWidth = (int)(display.w / scale);
-    int frameHeight = (int)(display.h / scale);
+    int frameWidth = (int)((cfg.graphic.isFullScreen ? display.w : cfg.graphic.windowWidth) / scale);
+    int frameHeight = (int)((cfg.graphic.isFullScreen ? display.h : cfg.graphic.windowHeight) / scale);
     int framePitch = frameWidth * 4;
     int offsetX = (frameWidth - 480) / 2;
     int offsetY = (frameHeight - 384) / 2;
+    int maskTR = cfg.graphic.isScanline ? 0xF0F0F0F0 : 0xFFFFFFFF;
+    int maskBL = cfg.graphic.isScanline ? 0x8F8F8F8F : 0xFFFFFFFF;
+    int maskBR = cfg.graphic.isScanline ? 0x80808080 : 0xFFFFFFFF;
     log("Texture: width=%d, height=%d, offsetX=%d, offsetY=%d", frameWidth, frameHeight, offsetX, offsetY);
     SDL_RenderSetLogicalSize(renderer, frameWidth, frameHeight);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
@@ -168,7 +185,7 @@ int main(int argc, char* argv[])
         log("No memory");        
         exit(-1);
     }
-    memset(frameBuffer, 0, frameWidth * frameHeight * 4);
+    memset(frameBuffer, 0, framePitch * frameHeight);
 
     log("Initializing VGS-Zero");
     int romSize;
@@ -210,6 +227,8 @@ int main(int argc, char* argv[])
         vgs0.loadSoundEffect(se, seSize);
     }
     vgs0.loadRom(rom, romSize);
+    vgs0.setBgmVolume(cfg.sound.volumeBgm);
+    vgs0.setSeVolume(cfg.sound.volumeSe);
 
     mkdir("save",  S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH | S_IXOTH);
     vgs0.saveCallback = [](VGS0* vgs0, const void* data, size_t size) -> bool {
@@ -287,32 +306,61 @@ int main(int argc, char* argv[])
             if (event.type == SDL_QUIT) {
                 halt = true;
             } else if (event.type == SDL_KEYDOWN) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_q: halt = true; break;
-                    case SDLK_UP: key1 |= VGS0_JOYPAD_UP; break;
-                    case SDLK_DOWN: key1 |= VGS0_JOYPAD_DW; break;
-                    case SDLK_LEFT: key1 |= VGS0_JOYPAD_LE; break;
-                    case SDLK_RIGHT: key1 |= VGS0_JOYPAD_RI; break;
-                    case SDLK_SPACE: key1 |= VGS0_JOYPAD_ST; break;
-                    case SDLK_ESCAPE: key1 |= VGS0_JOYPAD_SE; break;
-                    case SDLK_x: key1 |= VGS0_JOYPAD_T1; break;
-                    case SDLK_z: key1 |= VGS0_JOYPAD_T2; break;
-                    case SDLK_r: {
-                        log("Reset");
-                        vgs0.reset();
-                        break;
-                    }
+                if (cfg.keyboard.quit == event.key.keysym.sym) {
+                    halt = true;                    
+                }
+                if (cfg.keyboard.up == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_UP;
+                }
+                if (cfg.keyboard.down == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_DW;
+                }
+                if (cfg.keyboard.left == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_LE;
+                }
+                if (cfg.keyboard.right == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_RI;
+                }
+                if (cfg.keyboard.a == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_T1;
+                }
+                if (cfg.keyboard.b == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_T2;
+                }
+                if (cfg.keyboard.start == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_ST;
+                }
+                if (cfg.keyboard.start == event.key.keysym.sym) {
+                    key1 |= VGS0_JOYPAD_SE;
+                }
+                if (cfg.keyboard.reset == event.key.keysym.sym) {
+                    log("Reset");
+                    vgs0.reset();
                 }
             } else if (event.type == SDL_KEYUP) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_UP: key1 ^= VGS0_JOYPAD_UP; break;
-                    case SDLK_DOWN: key1 ^= VGS0_JOYPAD_DW; break;
-                    case SDLK_LEFT: key1 ^= VGS0_JOYPAD_LE; break;
-                    case SDLK_RIGHT: key1 ^= VGS0_JOYPAD_RI; break;
-                    case SDLK_SPACE: key1 ^= VGS0_JOYPAD_ST; break;
-                    case SDLK_ESCAPE: key1 ^= VGS0_JOYPAD_SE; break;
-                    case SDLK_x: key1 ^= VGS0_JOYPAD_T1; break;
-                    case SDLK_z: key1 ^= VGS0_JOYPAD_T2; break;
+                if (cfg.keyboard.up == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_UP;
+                }
+                if (cfg.keyboard.down == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_DW;
+                }
+                if (cfg.keyboard.left == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_LE;
+                }
+                if (cfg.keyboard.right == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_RI;
+                }
+                if (cfg.keyboard.a == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_T1;
+                }
+                if (cfg.keyboard.b == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_T2;
+                }
+                if (cfg.keyboard.start == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_ST;
+                }
+                if (cfg.keyboard.start == event.key.keysym.sym) {
+                    key1 ^= VGS0_JOYPAD_SE;
                 }
             }
         }
@@ -339,6 +387,7 @@ int main(int argc, char* argv[])
                     fb[ox + x] = img_err_joypad[ptr++];
                 }
             }
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
             SDL_UpdateTexture(texture, nullptr, frameBuffer, framePitch);
             SDL_SetRenderTarget(renderer, nullptr);
             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
@@ -380,15 +429,16 @@ int main(int argc, char* argv[])
                 rgb888 <<= 8;
                 auto offset = offsetX + x * 2;
                 pcDisplay[offset] = rgb888;
-                pcDisplay[offset + 1] = rgb888 & 0xF0F0F0F0;
-                pcDisplay[offset + frameWidth] = rgb888 & 0x8F8F8F8F;
-                pcDisplay[offset + frameWidth + 1] = rgb888 & 0x80808080;
+                pcDisplay[offset + 1] = rgb888 & maskTR;
+                pcDisplay[offset + frameWidth] = rgb888 & maskBL;
+                pcDisplay[offset + frameWidth + 1] = rgb888 & maskBR;
             }
             vgsDisplay += 240;
             pcDisplay += frameWidth * 2;
         }
 
         // render display
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
         SDL_UpdateTexture(texture, nullptr, frameBuffer, framePitch);
         SDL_SetRenderTarget(renderer, nullptr);
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
@@ -403,12 +453,10 @@ int main(int argc, char* argv[])
         }
     }
 
+    cfg.save();
+
     log("Terminating");
     delete steam;
-    SDL_CloseAudioDevice(audioDeviceId);
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
     SDL_Quit();
     free(frameBuffer);
     return 0;
